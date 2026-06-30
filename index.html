@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Project Hub</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-logo">🚀 Student Hub</h1>
+            <div class="nav-links">
+                <button onclick="switchTab('board')" class="nav-btn active" id="btn-board">Ideas Board</button>
+                <button onclick="switchTab('profile')" class="nav-btn" id="btn-profile">My Profile</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-layout">
+
+        <section id="tab-board" class="tab-content">
+            <div class="dashboard-grid">
+                
+                <div class="card card-form">
+                    <h2 class="card-title">Post a Project Idea</h2>
+                    <form id="projectForm" onsubmit="saveProject(event)" class="form-stack">
+                        <div class="form-group">
+                            <label>Project Title</label>
+                            <input type="text" id="projTitle" required placeholder="e.g., AI Study Companion">
+                        </div>
+                        <div class="form-group">
+                            <label>Description</label>
+                            <textarea id="projDesc" required rows="3" placeholder="What is the concept?"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Roles Needed (comma separated)</label>
+                            <input type="text" id="projRoles" required placeholder="e.g., UI Designer, Frontend Dev">
+                        </div>
+                        <button type="submit" class="btn btn-primary">Publish Idea Draft</button>
+                    </form>
+                </div>
+
+                <div class="feed-column">
+                    <h2 class="section-title">Active Draft Teams</h2>
+                    <div id="ideasFeed" class="feed-container">
+                        </div>
+                </div>
+
+            </div>
+        </section>
+
+        <section id="tab-profile" class="tab-content hidden">
+            <div class="card card-profile">
+                <h2 class="card-title text-large">My Profile Card</h2>
+                <p class="card-subtitle">List your skills so draft team leaders can find you.</p>
+                
+                <form id="profileForm" onsubmit="saveProfile(event)" class="form-stack">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="profName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Your Skills (comma separated)</label>
+                        <input type="text" id="profSkills" required placeholder="e.g., React, Figma, Python">
+                    </div>
+                    <div class="form-checkbox-group">
+                        <input type="checkbox" id="profLooking">
+                        <label for="profLooking">Actively looking for a team</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save Profile Card</button>
+                </form>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn-' + tabId).classList.add('active');
+        }
+
+        function saveProfile(e) {
+            e.preventDefault();
+            const profile = {
+                name: document.getElementById('profName').value,
+                skills: document.getElementById('profSkills').value,
+                looking: document.getElementById('profLooking').checked
+            };
+            localStorage.setItem('student_profile', JSON.stringify(profile));
+            alert('Profile saved locally!');
+        }
+
+        function saveProject(e) {
+            e.preventDefault();
+            const projects = JSON.parse(localStorage.getItem('student_projects')) || [];
+            const profile = JSON.parse(localStorage.getItem('student_profile')) || { name: 'Anonymous' };
+
+            const newProject = {
+                id: Date.now(),
+                title: document.getElementById('projTitle').value,
+                desc: document.getElementById('projDesc').value,
+                roles: document.getElementById('projRoles').value.split(',').map(r => r.trim()),
+                creator: profile.name
+            };
+
+            projects.unshift(newProject);
+            localStorage.setItem('student_projects', JSON.stringify(projects));
+            document.getElementById('projectForm').reset();
+            renderProjects();
+        }
+
+        function sendJoinRequest(projectTitle) {
+            const profile = JSON.parse(localStorage.getItem('student_profile'));
+            if (!profile) {
+                alert('Please complete your profile card first!');
+                switchTab('profile');
+                return;
+            }
+            alert(`🎉 Request sent to join "${projectTitle}"!\n\nSender: ${profile.name}\nSkills: ${profile.skills}`);
+        }
+
+        function renderProjects() {
+            const projects = JSON.parse(localStorage.getItem('student_projects')) || [];
+            const feed = document.getElementById('ideasFeed');
+            
+            if (projects.length === 0) {
+                feed.innerHTML = `<p class="empty-state">No ideas posted yet. Be the first!</p>`;
+                return;
+            }
+
+            feed.innerHTML = projects.map(proj => `
+                <div class="project-card">
+                    <div class="project-header">
+                        <h3 class="project-title">${proj.title}</h3>
+                        <span class="badge">Draft Stage</span>
+                    </div>
+                    <p class="project-desc">${proj.desc}</p>
+                    
+                    <div class="roles-section">
+                        <span class="roles-label">LOOKING FOR:</span>
+                        <div class="tags-container">
+                            ${proj.roles.map(role => `<span class="tag">${role}</span>`).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="project-footer">
+                        <span class="project-creator">Proposed by: <strong>${proj.creator}</strong></span>
+                        <button onclick="sendJoinRequest('${proj.title.replace(/'/g, "\\'")}')" class="btn btn-secondary">
+                            Request to Join
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.onload = function() {
+            const savedProfile = JSON.parse(localStorage.getItem('student_profile'));
+            if (savedProfile) {
+                document.getElementById('profName').value = savedProfile.name;
+                document.getElementById('profSkills').value = savedProfile.skills;
+                document.getElementById('profLooking').checked = savedProfile.looking;
+            }
+            renderProjects();
+        };
+    </script>
+</body>
+</html>
